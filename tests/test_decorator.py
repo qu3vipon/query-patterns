@@ -51,3 +51,38 @@ def test_empty_columns_raises():
         @query_pattern(table="t", columns=[])
         def foo():
             pass
+
+
+def test_query_pattern_decorator_prevents_duplicates(tmp_path, monkeypatch):
+    import importlib, sys, tempfile
+
+    module_name = f"mod_{next(tempfile._get_candidate_names())}"
+
+    mod_file = tmp_path / f"{module_name}.py"
+    mod_file.write_text(
+        "from query_patterns import query_pattern\n"
+        "@query_pattern(table='users', columns=['id'])\n"
+        "def foo():\n"
+        "    pass\n"
+    )
+
+    # Ensure import works and uses this path only
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(tmp_path))
+    sys.modules.pop(module_name, None)
+
+    # First import
+    mod1 = importlib.import_module(module_name)
+    fn1 = mod1.foo
+    patterns1 = getattr(fn1, '__query_patterns__', [])
+
+    # Reload the module
+    mod2 = importlib.reload(mod1)
+    fn2 = mod2.foo
+    patterns2 = getattr(fn2, '__query_patterns__', [])
+
+    # Ensure only one pattern registered
+    assert len(patterns1) == len(patterns2) == 1
+    pat = patterns2[0]
+    assert pat.table == "users"
+    assert pat.columns == ("id",)

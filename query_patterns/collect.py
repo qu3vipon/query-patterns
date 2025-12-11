@@ -20,30 +20,43 @@ EXCLUDE_DIRS = {
 
 def discover_modules_from_cwd() -> List[ModuleType]:
     """
-    Discover and import all Python modules under the current working directory.
-    Import errors are ignored to avoid side effects.
+    Discover Python modules in cwd without importing the same file twice.
     """
     cwd = Path.cwd()
     modules: list[ModuleType] = []
+    visited_files: set[str] = set()
 
-    # Make project root importable
     if str(cwd) not in sys.path:
         sys.path.insert(0, str(cwd))
 
     for py in cwd.rglob("*.py"):
-        # skip excluded directories
+        # skip excluded dirs
         if any(part in EXCLUDE_DIRS for part in py.parts):
             continue
 
-        # skip private / dunder files
+        # skip private/dunder
         if py.name.startswith("_"):
             continue
 
+        # canonical file path
+        abs_path = str(py.resolve())
+        if abs_path in visited_files:
+            continue
+        visited_files.add(abs_path)
+
+        # build a safe module name
+        rel_parts = py.with_suffix("").relative_to(cwd).parts
+        module_name = ".".join(rel_parts)
+
+        # if module is already imported, reuse it
+        if module_name in sys.modules:
+            modules.append(sys.modules[module_name])
+            continue
+
         try:
-            module_path = ".".join(py.with_suffix("").relative_to(cwd).parts)
-            modules.append(importlib.import_module(module_path))
+            mod = importlib.import_module(module_name)
+            modules.append(mod)
         except Exception:
-            # ignore import side-effects / errors
             continue
 
     return modules

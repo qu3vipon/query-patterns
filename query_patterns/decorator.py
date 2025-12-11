@@ -1,4 +1,4 @@
-from .pattern import QueryPattern
+from query_patterns.pattern import QueryPattern
 
 
 def query_pattern(*, table: str, columns: list[str]):
@@ -15,7 +15,8 @@ def query_pattern(*, table: str, columns: list[str]):
             patterns = []
             setattr(fn, "__query_patterns__", patterns)
 
-        patterns.append(pattern)
+        if pattern not in patterns:
+            patterns.append(pattern)
         return fn
 
     return decorator
