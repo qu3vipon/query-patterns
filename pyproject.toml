@@ -1,0 +1,22 @@
+[project]
+name = "query-patterns"
+version = "0.1.0"
+description = "Lightweight query access-pattern declaration for ORMs"
+requires-python = ">=3.10"
+readme = "README.md"
+
+dependencies = [
+    "click>=8.1",
+]
+
+[project.optional-dependencies]
+sqlalchemy = ["sqlalchemy>=2.0"]
+django = ["django>=4.2"]
+dev = ["pytest", "tox", "ruff"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project.scripts]
+query-patterns = "query_patterns.cli.main:main"
