@@ -4,6 +4,10 @@ from query_patterns.decorator import query_pattern
 from query_patterns.pattern import QueryPattern
 
 
+def get_patterns(fn):
+    return getattr(fn, "__query_patterns__", [])
+
+
 def test_single_query_pattern_attached():
     class Repo:
         @query_pattern(
@@ -15,7 +19,7 @@ def test_single_query_pattern_attached():
 
     fn = Repo.foo
 
-    assert hasattr(fn, "__query_patterns__")
+    assert get_patterns(fn)
     patterns = fn.__query_patterns__
     assert len(patterns) == 1
 
@@ -32,7 +36,7 @@ def test_multiple_query_patterns_attached():
         def foo(self):
             pass
 
-    patterns = Repo.foo.__query_patterns__
+    patterns = get_patterns(Repo.foo)
     assert len(patterns) == 2
 
     assert patterns[0].columns == ("a", "b")
@@ -74,15 +78,103 @@ def test_query_pattern_decorator_prevents_duplicates(tmp_path, monkeypatch):
     # First import
     mod1 = importlib.import_module(module_name)
     fn1 = mod1.foo
-    patterns1 = getattr(fn1, '__query_patterns__', [])
+    patterns1 = get_patterns(fn1)
+    assert len(patterns1) == 1
 
     # Reload the module
     mod2 = importlib.reload(mod1)
     fn2 = mod2.foo
-    patterns2 = getattr(fn2, '__query_patterns__', [])
+    patterns2 = get_patterns(fn2)
 
     # Ensure only one pattern registered
     assert len(patterns1) == len(patterns2) == 1
     pat = patterns2[0]
     assert pat.table == "users"
     assert pat.columns == ("id",)
+
+def test_query_pattern_with_sqlalchemy_orm():
+    from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+    class Base(DeclarativeBase):
+        pass
+
+    class User(Base):
+        __tablename__ = "sa_users"
+
+        id: Mapped[int] = mapped_column(primary_key=True)
+        name: Mapped[str]
+
+
+    @query_pattern(table=User, columns=["id", "name"])
+    def foo():
+        pass
+
+    patterns = get_patterns(foo)
+    assert len(patterns) == 1
+    assert patterns[0].table == "sa_users"
+    assert patterns[0].columns == ("id", "name")
+
+
+def test_query_pattern_with_sqlalchemy_table():
+    from sqlalchemy import MetaData, Table, Column, Integer
+
+    metadata = MetaData()
+
+    user_table = Table(
+        "sa_users",
+        metadata,
+        Column("id", Integer, primary_key=True),
+    )
+
+    @query_pattern(table=user_table, columns=["id"])
+    def foo():
+        pass
+
+    patterns = get_patterns(foo)
+    assert len(patterns) == 1
+    assert patterns[0].table == "sa_users"
+    assert patterns[0].columns == ("id",)
+
+
+def setup_django():
+    from django.conf import settings
+    from django.apps import apps
+
+    if not settings.configured:
+        settings.configure(
+            INSTALLED_APPS=[],
+            DATABASES={"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memory:"}},
+        )
+    if not apps.ready:
+        apps.populate(settings.INSTALLED_APPS)
+
+
+def test_query_pattern_with_django_model_like():
+    setup_django()
+
+    from django.db import models
+
+    class User(models.Model):
+        id = models.AutoField(primary_key=True)
+
+        class Meta:
+            app_label = "tests"
+            db_table = "django_users"
+
+
+    @query_pattern(table=User, columns=["id"])
+    def foo():
+        pass
+
+    patterns = get_patterns(foo)
+    assert patterns[0].table == "django_users"
+
+
+def test_query_pattern_rejects_unsupported_type():
+    class NotATable:
+        pass
+
+    with pytest.raises(TypeError):
+        @query_pattern(table=NotATable, columns=["id"])
+        def foo():
+            pass
