@@ -9,11 +9,17 @@ from query_patterns.collect import (
 from query_patterns.analyze import analyze_patterns
 from query_patterns.cli.tools.django import (
     setup_django,
-    collect_django_indexes,
+    collect_django_indexes_from_schema, collect_django_indexes_from_db,
 )
 
 
 @click.command(name="django")
+@click.option(
+    "--source",
+    type=click.Choice(["schema", "db"], case_sensitive=False),
+    default="schema",
+    help="Where to collect indexes from: Django model schema or actual DB.",
+)
 @click.option(
     "--module",
     multiple=True,
@@ -25,20 +31,15 @@ from query_patterns.cli.tools.django import (
     help="Django settings module path (e.g. config.settings). "
          "If omitted, DJANGO_SETTINGS_MODULE must be set.",
 )
-@click.option(
-    "--fail-on-missing",
-    is_flag=True,
-    help="Exit with code 1 if missing indexes are found.",
-)
-def django_cmd(module, settings, fail_on_missing):
+def django_cmd(module, settings, source):
     """
-    Analyze Django query patterns against Django ORM indexes.
+    Analyze Django query patterns against Django ORM indexes (schema or DB).
     """
     try:
-        import django  # noqa: F401
+        import django
     except ImportError:
         raise click.ClickException(
-            "Django support requires installing query-patterns with the [django] extra:\n"
+            "Django support requires installing with the [django] extra:\n"
             "    pip install query-patterns[django]"
         )
 
@@ -61,7 +62,12 @@ def django_cmd(module, settings, fail_on_missing):
         click.echo("No @query_pattern declarations found.")
         return
 
-    indexes = collect_django_indexes()
+    if source == "schema":
+        click.echo("Collecting indexes from Django model schema...")
+        indexes = collect_django_indexes_from_schema()
+    else:
+        click.echo("Collecting indexes from actual database...")
+        indexes = collect_django_indexes_from_db()
 
     results = analyze_patterns(patterns, indexes)
 
@@ -74,5 +80,5 @@ def django_cmd(module, settings, fail_on_missing):
             missing_found = True
             click.echo(click.style(f"[MISSING] {key}", fg="red"))
 
-    if missing_found and fail_on_missing:
+    if missing_found:
         sys.exit(1)

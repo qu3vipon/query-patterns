@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import os
 
+from query_patterns.cli.tools.types import IndexSet, TableName
+
 
 def setup_django(settings_module: str | None = None) -> None:
     """
@@ -16,51 +18,75 @@ def setup_django(settings_module: str | None = None) -> None:
       - django.setup() is called
     """
     try:
-        import django  # noqa: F401
+        import django
     except ImportError as e:
         raise RuntimeError(
             "Django support requires installing the 'django' extra "
             "(e.g. 'pip install query-patterns[django]')"
         ) from e
 
-    # Set Django settings module if provided
     if settings_module:
         os.environ.setdefault("DJANGO_SETTINGS_MODULE", settings_module)
 
-    # Ensure settings are available
     if not os.environ.get("DJANGO_SETTINGS_MODULE"):
         raise RuntimeError(
             "DJANGO_SETTINGS_MODULE is not set. Use --settings option "
             "or set the environment variable."
         )
 
-    # Initialize Django
-    import django  # noqa
+    import django
     django.setup()
 
 
-def collect_django_indexes():
+def collect_django_indexes_from_schema() -> IndexSet:
     """
-    Collect all indexes defined on Django models.
+    Collect all indexes defined in Django model declarations (schema level).
 
     Returns:
-        A set of (table_name, (field1, field2, ...)) representing indexes.
+        IndexSet: a set of (table_name, (field1, field2, ...))
+        NOTE:
+            - Only Django model-declared indexes (model.Meta.indexes) are included.
+            - Implicit PK indexes, unique constraints, and unique_together
+              are not included unless explicitly declared as Index().
     """
+    indexes: IndexSet = set()
+
     from django.apps import apps
-
-    indexes: set[tuple[str, tuple[str, ...]]] = set()
-
-    # Iterate over all registered Django models
     for model in apps.get_models():
-        table = model._meta.db_table
+        table = TableName(model._meta.db_table)
 
-        # Collect index definitions explicitly declared on the model
         for index in model._meta.indexes:
             cols = tuple(index.fields)
             indexes.add((table, cols))
+    return indexes
 
-        # NOTE:
-        # unique_together, constraints, or implicit PK indexes are not included
-        # here yet. They can be added later depending on desired behavior.
+
+def collect_django_indexes_from_db() -> IndexSet:
+    """
+    Collect all actual indexes that exist in the database via Django's
+    introspection system.
+
+    Returns:
+        IndexSet: a set of (table_name, (field1, field2, ...))
+                  representing actual DB-level indexes.
+
+    """
+    indexes: IndexSet = set()
+
+    from django.db import connection
+    with connection.cursor() as cursor:
+        for table_name in connection.introspection.table_names():
+            constraints = connection.introspection.get_constraints(cursor, table_name)
+
+            for _, spec in constraints.items():
+                # spec keys include:
+                #   columns, primary_key, unique, index, check, foreign_key, ...
+
+                # Keep ONLY real indexes (not PK)
+                if spec.get("index") and not spec.get("primary_key"):
+                    cols = tuple(spec["columns"])
+                    indexes.add(
+                        (TableName(table_name), cols)
+                    )
 
     return indexes
