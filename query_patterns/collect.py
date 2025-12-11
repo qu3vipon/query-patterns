@@ -67,16 +67,18 @@ def collect_query_patterns(
 ) -> list[QueryPattern]:
     """
     Collect all QueryPattern objects attached via @query_pattern
-    from the given modules.
+    from the given modules, deduplicating identical patterns.
     """
-    patterns: list[QueryPattern] = []
+    unique: set[QueryPattern] = set()
 
     for module in modules:
-        for obj in vars(module).values():
+        for name, obj in vars(module).items():
+            if inspect.isfunction(obj):
+                for p in getattr(obj, "__query_patterns__", []):
+                    unique.add(p)
             if inspect.isclass(obj):
                 for _, fn in inspect.getmembers(obj, inspect.isfunction):
-                    patterns.extend(
-                        getattr(fn, "__query_patterns__", [])
-                    )
+                    for p in getattr(fn, "__query_patterns__", []):
+                        unique.add(p)
 
-    return patterns
+    return list(unique)
