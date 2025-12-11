@@ -1,3 +1,5 @@
+from os import urandom
+
 import pytest
 
 from query_patterns.decorator import query_pattern
@@ -149,7 +151,7 @@ def setup_django():
         apps.populate(settings.INSTALLED_APPS)
 
 
-def test_query_pattern_with_django_model_like():
+def test_query_pattern_with_django_model():
     setup_django()
 
     from django.db import models
@@ -178,3 +180,76 @@ def test_query_pattern_rejects_unsupported_type():
         @query_pattern(table=NotATable, columns=["id"])
         def foo():
             pass
+
+
+def test_columns_with_sqlalchemy_orm():
+    from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+    class Base(DeclarativeBase):
+        pass
+
+    class User(Base):
+        __tablename__ = "users"
+        id: Mapped[int] = mapped_column(primary_key=True)
+        email: Mapped[str]
+
+    @query_pattern(table=User, columns=(User.id, User.email))
+    def foo():
+        pass
+
+    patterns = get_patterns(foo)
+    assert patterns[0].columns == ("id", "email")
+
+
+def test_columns_with_sqlalchemy_table():
+    from sqlalchemy import MetaData, Table, Column, Integer, String
+
+    metadata = MetaData()
+
+    user_table = Table(
+        "users",
+        metadata,
+        Column("id", Integer, primary_key=True),
+        Column("email", String),
+    )
+
+    @query_pattern(table=user_table, columns=(user_table.c.id, user_table.c.email))
+    def foo():
+        pass
+
+    patterns = get_patterns(foo)
+    assert patterns[0].columns == ("id", "email")
+
+
+def test_columns_with_django_fields():
+    setup_django()
+
+    from django.db import models
+
+    class User2(models.Model):
+        id = models.AutoField(primary_key=True)
+        email = models.CharField(max_length=50)
+
+        class Meta:
+            app_label = "tests"
+            db_table = "users"
+
+    @query_pattern(
+        table=User2,
+        columns=(
+            User2._meta.get_field("id"),
+            User2._meta.get_field("email"),
+        ),
+    )
+    def foo():
+        pass
+
+    patterns = get_patterns(foo)
+    assert patterns[0].columns == ("id", "email")
+
+def test_columns_invalid_type():
+    class NotAColumn:
+        pass
+
+    with pytest.raises(TypeError):
+        QueryPattern(table="users", columns=(NotAColumn(),))

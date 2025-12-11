@@ -19,3 +19,15 @@ class DjangoModelLike(Protocol):
 
 
 TableLike: TypeAlias = str | SQLAlchemyORMLike | SQLAlchemyTableLike | DjangoModelLike
+
+
+@runtime_checkable
+class ORMColumnLike(Protocol):
+    key: str  # SQLAlchemy ORM InstrumentedAttribute
+
+@runtime_checkable
+class NamedColumnLike(Protocol):
+    name: str  # SQLAlchemy Core Column, Django Field
+
+
+ColumnLike: TypeAlias = str | ORMColumnLike | NamedColumnLike

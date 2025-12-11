@@ -1,10 +1,10 @@
 from typing import Iterable
 
 from query_patterns.pattern import QueryPattern
-from query_patterns.types import TableLike
+from query_patterns.types import TableLike, ColumnLike
 
 
-def query_pattern(*, table: TableLike, columns: Iterable[str]):
+def query_pattern(*, table: TableLike, columns: Iterable[ColumnLike]):
     if table is None or table == "":
         raise ValueError("table must not be empty")
     if columns is None or not columns:
