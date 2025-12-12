@@ -1,13 +1,8 @@
-from os import urandom
-
 import pytest
 
 from query_patterns.decorator import query_pattern
 from query_patterns.pattern import QueryPattern
-
-
-def get_patterns(fn):
-    return getattr(fn, "__query_patterns__", [])
+from query_patterns.utils import get_patterns
 
 
 def test_single_query_pattern_attached():
@@ -47,6 +42,7 @@ def test_multiple_query_patterns_attached():
 
 def test_invalid_table_raises():
     with pytest.raises(ValueError):
+
         @query_pattern(table="", columns=["a"])
         def foo():
             pass
@@ -54,13 +50,16 @@ def test_invalid_table_raises():
 
 def test_empty_columns_raises():
     with pytest.raises(ValueError):
+
         @query_pattern(table="t", columns=[])
         def foo():
             pass
 
 
 def test_query_pattern_decorator_prevents_duplicates(tmp_path, monkeypatch):
-    import importlib, sys, tempfile
+    import importlib
+    import sys
+    import tempfile
 
     module_name = f"mod_{next(tempfile._get_candidate_names())}"
 
@@ -94,6 +93,7 @@ def test_query_pattern_decorator_prevents_duplicates(tmp_path, monkeypatch):
     assert pat.table == "users"
     assert pat.columns == ("id",)
 
+
 def test_query_pattern_with_sqlalchemy_orm():
     from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -105,7 +105,6 @@ def test_query_pattern_with_sqlalchemy_orm():
 
         id: Mapped[int] = mapped_column(primary_key=True)
         name: Mapped[str]
-
 
     @query_pattern(table=User, columns=["id", "name"])
     def foo():
@@ -145,7 +144,9 @@ def setup_django():
     if not settings.configured:
         settings.configure(
             INSTALLED_APPS=[],
-            DATABASES={"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memory:"}},
+            DATABASES={
+                "default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memory:"}
+            },
         )
     if not apps.ready:
         apps.populate(settings.INSTALLED_APPS)
@@ -163,7 +164,6 @@ def test_query_pattern_with_django_model():
             app_label = "tests"
             db_table = "django_users"
 
-
     @query_pattern(table=User, columns=["id"])
     def foo():
         pass
@@ -177,6 +177,7 @@ def test_query_pattern_rejects_unsupported_type():
         pass
 
     with pytest.raises(TypeError):
+
         @query_pattern(table=NotATable, columns=["id"])
         def foo():
             pass
@@ -246,6 +247,7 @@ def test_columns_with_django_fields():
 
     patterns = get_patterns(foo)
     assert patterns[0].columns == ("id", "email")
+
 
 def test_columns_invalid_type():
     class NotAColumn:

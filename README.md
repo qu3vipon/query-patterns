@@ -2,6 +2,17 @@
 Declare query-access patterns in code and verify matching DB indexes.
 Supports SQLAlchemy and Django, both schema-based and database introspection modes.
 
+## Motivation
+As projects grow, the number and variety of database queries increase. 
+Over time, it becomes difficult to maintain a consistent set of query-access patterns across the codebase, and even harder to verify whether each pattern is backed by an appropriate database index.
+Relying on manual checks or memory often leads to:
+- Missing or outdated indexes that cause silent performance regressions
+- Inconsistent query patterns across teams or modules
+- Schema changes that unintentionally break previously optimized queries
+- Performance issues that surface only in production traffic
+
+query-patterns addresses these problems by allowing you to declare expected query patterns in code and validate them against either your ORM schema or a running database instance — all via a simple CLI command.
+
 ## What it does
 - Collects all @query_pattern declarations from your Python modules
 - Extracts index definitions from:
@@ -12,14 +23,7 @@ Supports SQLAlchemy and Django, both schema-based and database introspection mod
     - ORM schema (Model._meta.indexes)
     - Actual DB (connection.introspection)
 - Compares (table, columns) tuples
-- Reports:
-  - [OK] — index exists
-  - [MISSING] — index missing
 - Can be integrated into CI to enforce index coverage
-
-### Example output
-- [OK] users('email',)
-- [MISSING] orders('user_id',)
 
 ## Install
 ```shell
@@ -30,12 +34,22 @@ pip install query-patterns
 ```python
 from query_patterns import query_pattern
 
-class Repo:
+
+# Declare query pattern using table/column names
+class RepoA:
     @query_pattern(table="users", columns=["email"])
+    def find(self, email): ...
+
+
+# Declare query pattern using ORM models(works with both SQLAlchemy and Django models)
+from models import User
+
+class RepoB:
+    @query_pattern(table=User, columns=[User.email])
     def find(self, email): ...
 ```
 
-### 1. SQLAlchemy Command
+### a. SQLAlchemy Command
 ```shell
 # Reads indexes from MetaData
 query-patterns sqlalchemy \
@@ -53,7 +67,7 @@ query-patterns sqlalchemy \
   --module myapp.repo
 ```
 
-### 2. Django Command
+### b. Django Command
 ```shell
 # Reads Model._meta.indexes from installed apps
 query-patterns django \
