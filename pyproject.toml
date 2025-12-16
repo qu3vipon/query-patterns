@@ -1,6 +1,6 @@
 [project]
 name = "query-patterns"
-version = "0.1.9"
+version = "0.1.10"
 description = "Lightweight query access-pattern declaration for ORMs"
 requires-python = ">=3.10"
 readme = "README.md"
@@ -12,6 +12,7 @@ dependencies = [
 [project.optional-dependencies]
 sqlalchemy = ["sqlalchemy>=2.0"]
 django = ["django>=4.2"]
+sqlmodel = ["sqlmodel>=0.0.27"]
 dev = ["pytest", "tox", "ruff"]
 
 [build-system]

@@ -1,6 +1,7 @@
 # query-patterns
 Declare query-access patterns in code and verify matching DB indexes.
 Supports SQLAlchemy and Django, both schema-based and database introspection modes.
+SQLModel is also supported, as it is built on top of SQLAlchemy.
 
 ## Motivation
 As projects grow, the number and variety of database queries increase. 
@@ -16,7 +17,7 @@ query-patterns addresses these problems by allowing you to declare expected quer
 ## What it does
 - Collects all @query_pattern declarations from your Python modules
 - Extracts index definitions from:
-  - SQLAlchemy 
+  - SQLAlchemy (including SQLModel)
     - ORM schema (MetaData)
     - Actual DB (Inspector)
   - Django 
@@ -41,7 +42,8 @@ class RepoA:
     def find(self, email): ...
 
 
-# Declare query pattern using ORM models(works with both SQLAlchemy and Django models)
+# Declare query pattern using ORM models
+# (works with SQLAlchemy, SQLModel, and Django models)
 from models import User
 
 class RepoB:
@@ -51,36 +53,51 @@ class RepoB:
 
 ### a. SQLAlchemy Command
 ```shell
-# Reads indexes from MetaData
+# Reads declared indexes from SQLAlchemy MetaData
+query-patterns sqlalchemy \
+  --metadata myapp.db.metadata
+
+# collects query patterns from the specified module
 query-patterns sqlalchemy \
   --metadata myapp.db.metadata \
   --module myapp.repo
   
-# Auto-discover modules
-query-patterns sqlalchemy \
-  --metadata myapp.db.metadata
-  
 # Reads actual indexes from the database
 query-patterns sqlalchemy \
   --source db \
-  --engine-url postgresql://user:pass@localhost/mydb \
-  --module myapp.repo
+  --engine-url postgresql://user:pass@localhost/mydb
 ```
 
 ### b. Django Command
 ```shell
 # Reads Model._meta.indexes from installed apps
 query-patterns django \
+  --settings config.settings
+
+# collects query patterns from the specified module
+query-patterns django \
   --settings config.settings \
   --module myapp.repo
-  
-# Auto-discover modules 
-query-patterns django \
-  --settings config.settings
   
 # Reads actual DB indexes using Django introspection
 query-patterns django \
   --source db \
-  --settings config.settings \
+  --settings config.settings
+```
+
+### c. SQLModel Command
+```shell
+# Reads declared indexes from SQLModel MetaData
+query-patterns sqlmodel \
+  --metadata myapp.db.metadata
+
+# collects query patterns from the specified module
+query-patterns sqlmodel \
+  --metadata myapp.db.metadata \
   --module myapp.repo
- ```
+  
+# Reads actual indexes from the database
+query-patterns sqlmodel \
+  --source db \
+  --engine-url postgresql://user:pass@localhost/mydb
+```
