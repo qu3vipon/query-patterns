@@ -26,7 +26,7 @@ query-patterns addresses these problems by allowing you to declare expected quer
 - Compares (table, columns) tuples
 - Can be integrated into CI to enforce index coverage
 ### Example output
-![Example Output](./docs/example.png)
+![Example Output](https://raw.githubusercontent.com/qu3vipon/query-patterns/main/docs/example.png)
 
 ## Install
 ```shell
