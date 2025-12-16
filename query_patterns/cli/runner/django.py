@@ -1,8 +1,6 @@
 import os
 
 import click
-from django.apps import apps
-from django.db.models import UniqueConstraint
 
 from query_patterns.cli.runner.base import BaseRunner
 from query_patterns.cli.runner.types import IndexSet, TableName, PatternSource
@@ -56,6 +54,9 @@ class DjangoRunner(BaseRunner):
         """
         Collect all indexes defined in Django model declarations (schema level).
         """
+        from django.apps import apps
+        from django.db.models import UniqueConstraint
+
         indexes: IndexSet = set()
 
         for model in apps.get_models():

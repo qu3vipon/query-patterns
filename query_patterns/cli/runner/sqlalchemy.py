@@ -2,7 +2,6 @@ import importlib
 from typing import TYPE_CHECKING
 
 import click
-from sqlalchemy import inspect, UniqueConstraint
 
 from query_patterns.cli.runner.base import BaseRunner
 from query_patterns.cli.runner.types import IndexSet, TableName, PatternSource
@@ -75,6 +74,8 @@ class SQLAlchemyRunner(BaseRunner):
 
     @staticmethod
     def _collect_sqlalchemy_indexes_from_schema(metadata: "MetaData") -> IndexSet:
+        from sqlalchemy import UniqueConstraint
+
         indexes: IndexSet = set()
 
         for table in metadata.tables.values():
@@ -101,6 +102,8 @@ class SQLAlchemyRunner(BaseRunner):
 
     @staticmethod
     def _collect_sqlalchemy_indexes_from_db(engine: "Engine") -> IndexSet:
+        from sqlalchemy import inspect, UniqueConstraint
+
         indexes: IndexSet = set()
         inspector = inspect(engine)
 
