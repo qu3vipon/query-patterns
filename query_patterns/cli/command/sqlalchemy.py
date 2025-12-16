@@ -25,13 +25,19 @@ from query_patterns.cli.runner.sqlalchemy import SQLAlchemyRunner
     help="Database URL (required if --source=db)",
 )
 @click.option(
+    "--exclude",
+    multiple=True,
+    help="Modules to exclude (can be specified multiple times).",
+)
+@click.option(
     "--quiet", "-q", is_flag=True, help="Show errors only (suppress normal output)."
 )
-def sqlalchemy_cmd(module, metadata, source, engine_url, quiet):
+def sqlalchemy_cmd(module, metadata, source, engine_url, exclude, quiet):
     SQLAlchemyRunner(
         module=module,
         metadata=metadata,
         source=source,
         engine_url=engine_url,
+        exclude=exclude,
         quiet=quiet,
     ).run()

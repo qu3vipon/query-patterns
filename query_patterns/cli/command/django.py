@@ -22,7 +22,14 @@ from query_patterns.cli.runner.django import DjangoRunner
     "If omitted, DJANGO_SETTINGS_MODULE must be set.",
 )
 @click.option(
+    "--exclude",
+    multiple=True,
+    help="Modules to exclude (can be specified multiple times).",
+)
+@click.option(
     "--quiet", "-q", is_flag=True, help="Show errors only (suppress normal output)."
 )
-def django_cmd(module, settings, source, quiet):
-    DjangoRunner(module=module, settings=settings, source=source, quiet=quiet).run()
+def django_cmd(module, settings, source, exclude, quiet):
+    DjangoRunner(
+        module=module, settings=settings, source=source, exclude=exclude, quiet=quiet
+    ).run()

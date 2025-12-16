@@ -215,3 +215,37 @@ def local_func():
     assert tables == {"local_table"}
 
     assert list(counts.values()) == [1]
+
+
+def test_exclude_modules(tmp_path, monkeypatch):
+    # given
+    (tmp_path / "app").mkdir()
+    (tmp_path / "app" / "__init__.py").write_text("")
+    (tmp_path / "app" / "core.py").write_text("")
+
+    (tmp_path / "app" / "migrations").mkdir()
+    (tmp_path / "app" / "migrations" / "__init__.py").write_text("")
+    (tmp_path / "app" / "migrations" / "v1.py").write_text("")
+    (tmp_path / "app" / "migrations" / "v2.py").write_text("")
+
+    (tmp_path / "app" / "user").mkdir()
+    (tmp_path / "app" / "user" / "__init__.py").write_text("")
+    (tmp_path / "app" / "user" / "models.py").write_text("")
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(tmp_path))
+
+    runner = DummyRunner()
+    runner.exclude = ("app.migrations.v1", "app.user")
+
+    # when
+    modules = runner._import_modules()
+
+    # then
+    names = [m.__name__ for m in modules]
+
+    assert "app.core" in names
+    assert "app.migrations.v2" in names
+
+    assert not any(n.startswith("app.migrations.v1") for n in names)
+    assert not any(n.startswith("app.user") for n in names)

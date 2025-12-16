@@ -11,11 +11,17 @@ class DjangoRunner(BaseRunner):
     source: PatternSource = "schema"
 
     def __init__(
-        self, module: tuple[str, ...], settings: str, source: PatternSource, quiet: bool
+        self,
+        module: tuple[str, ...],
+        settings: str,
+        source: PatternSource,
+        exclude: tuple[str, ...],
+        quiet: bool,
     ):
         self.module = module
         self.settings = settings
         self.source = source
+        self.exclude = exclude
         self.quiet = quiet
 
     def _load_env(self):

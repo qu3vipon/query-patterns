@@ -26,6 +26,7 @@ EXCLUDE_DIRS = {
 
 class BaseRunner:
     module: tuple[str, ...] = ()
+    exclude: tuple[str, ...] = ()
     quiet: bool
 
     def run(self):
@@ -46,6 +47,16 @@ class BaseRunner:
         else:
             click.echo("Auto-discovering project modules...")
             modules = self._discover_modules_from_cwd()
+
+        if self.exclude:
+            modules = [
+                m
+                for m in modules
+                if not any(
+                    m.__name__ == ex or m.__name__.startswith(ex + ".")
+                    for ex in self.exclude
+                )
+            ]
 
         if not modules:
             raise click.ClickException("No modules found to scan.")

@@ -22,12 +22,14 @@ class SQLAlchemyRunner(BaseRunner):
         source: PatternSource,
         metadata: str | None,
         engine_url: str | None,
+        exclude: tuple[str, ...],
         quiet: bool,
     ):
         self.module = module
         self.source = source
         self.metadata = metadata
         self.engine_url = engine_url
+        self.exclude = exclude
         self.quiet = quiet
 
     def _load_env(self):
