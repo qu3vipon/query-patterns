@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "query-patterns"
 version = "0.1.11"
@@ -15,9 +19,6 @@ django = ["django>=4.2"]
 sqlmodel = ["sqlmodel>=0.0.27"]
 dev = ["pytest", "tox", "ruff", "pre-commit"]
 
-[build-system]
-requires = ["setuptools>=68"]
-build-backend = "setuptools.build_meta"
 
 [project.scripts]
 query-patterns = "query_patterns.cli.main:main"
