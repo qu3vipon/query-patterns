@@ -20,6 +20,7 @@ EXCLUDE_DIRS = {
     ".tox",
     ".git",
     "site-packages",
+    "tests",
 }
 
 
@@ -57,8 +58,18 @@ class BaseRunner:
             sys.path.insert(0, str(cwd))
         return cwd
 
+    @staticmethod
+    def _is_local_module(mod: ModuleType, cwd: Path) -> bool:
+        path = getattr(mod, "__file__", None)
+        if not path:
+            return False
+        try:
+            return Path(path).resolve().is_relative_to(cwd)
+        except ValueError:
+            return False
+
     def _import_module_from_cwd(self, module: tuple[str, ...]) -> List[ModuleType]:
-        self._add_cwd_to_syspath()
+        cwd = self._add_cwd_to_syspath()
 
         seen: set[str] = set()
         modules: list[ModuleType] = []
@@ -67,7 +78,11 @@ class BaseRunner:
             if m in seen:
                 continue
             seen.add(m)
-            modules.append(importlib.import_module(m))
+
+            mod = importlib.import_module(m)
+            if not self._is_local_module(mod, cwd):
+                continue
+            modules.append(mod)
 
         return modules
 
@@ -75,6 +90,7 @@ class BaseRunner:
         """
         Discover Python modules in cwd without importing the same file twice.
         """
+
         cwd = self._add_cwd_to_syspath()
 
         seen: set[str] = set()
@@ -100,6 +116,9 @@ class BaseRunner:
 
             try:
                 mod = importlib.import_module(module_name)
+                if not self._is_local_module(mod, cwd):
+                    continue
+
                 modules.append(mod)
             except Exception:
                 continue
@@ -117,10 +136,15 @@ class BaseRunner:
         """
         counts: OrderedDict[QueryPattern, int] = OrderedDict()
 
+        def iter_defined_objects(module: ModuleType):
+            for obj in vars(module).values():
+                if getattr(obj, "__module__", None) == module.__name__:
+                    yield obj
+
         for module in modules:
             seen_funcs: set[int] = set()
 
-            for _, obj in vars(module).items():
+            for obj in iter_defined_objects(module):
                 if inspect.isfunction(obj):
                     if id(obj) in seen_funcs:
                         continue

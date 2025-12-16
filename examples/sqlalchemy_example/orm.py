@@ -1,4 +1,5 @@
 from sqlalchemy import MetaData, Table, Column, Integer, String, Index, create_engine
+from repo import *  # noqa
 
 engine_url = "sqlite:///file::memory:?cache=shared&uri=true"
 

@@ -6,9 +6,12 @@ from query_patterns.cli.main import main as cli_main
 from sqlalchemy import MetaData, Table, Column, Integer, Index, create_engine
 
 
-def test_cli_sqlalchemy_from_schema_success(tmp_path, monkeypatch):
+def test_cli_sqlalchemy_from_schema_success(tmp_path, monkeypatch, isolated_cwd_and_module):
     # given
-    module_file = tmp_path / "mod.py"
+    mod_name = "mod"
+    isolated_cwd_and_module(mod_name)
+
+    module_file = tmp_path / f"{mod_name}.py"
     module_file.write_text(
         textwrap.dedent((
             """
@@ -46,7 +49,7 @@ def test_cli_sqlalchemy_from_schema_success(tmp_path, monkeypatch):
         [
             "sqlalchemy",
             "--module",
-            "mod",
+            mod_name,
             "--metadata",
             "meta.metadata",
         ],
@@ -57,9 +60,12 @@ def test_cli_sqlalchemy_from_schema_success(tmp_path, monkeypatch):
     assert "[MISSING]" not in result.output
 
 
-def test_cli_sqlalchemy_from_schema_missing(tmp_path, monkeypatch):
+def test_cli_sqlalchemy_from_schema_missing(tmp_path, monkeypatch, isolated_cwd_and_module):
     # given
-    module_file = tmp_path / "mod_missing.py"
+    mod_name = "mod_missing"
+    isolated_cwd_and_module(mod_name)
+
+    module_file = tmp_path / f"{mod_name}.py"
     module_file.write_text(
         textwrap.dedent(
             """
@@ -91,7 +97,7 @@ def test_cli_sqlalchemy_from_schema_missing(tmp_path, monkeypatch):
         [
             "sqlalchemy",
             "--module",
-            "mod_missing",
+            mod_name,
             "--metadata",
             "meta_missing.metadata",
         ],
@@ -104,9 +110,12 @@ def test_cli_sqlalchemy_from_schema_missing(tmp_path, monkeypatch):
     assert "[OK]" not in result.output
 
 
-def test_cli_sqlalchemy_from_db_succcess(tmp_path, monkeypatch):
+def test_cli_sqlalchemy_from_db_success(tmp_path, monkeypatch, isolated_cwd_and_module):
     # given
-    module_file = tmp_path / "mod.py"
+    mod_name = "mod"
+    isolated_cwd_and_module(mod_name)
+
+    module_file = tmp_path / f"{mod_name}.py"
     module_file.write_text(
         textwrap.dedent(
             """
@@ -142,7 +151,7 @@ class Repo:
         [
             "sqlalchemy",
             "--module",
-            "mod",
+            mod_name,
             "--source",
             "db",
             "--engine-url",
@@ -156,9 +165,12 @@ class Repo:
     assert "[MISSING]" not in result.output
 
 
-def test_cli_sqlalchemy_from_db_missing(tmp_path, monkeypatch):
+def test_cli_sqlalchemy_from_db_missing(tmp_path, monkeypatch, isolated_cwd_and_module):
     # given
-    module_file = tmp_path / "mod_missing.py"
+    mod_name = "mod_missing"
+    isolated_cwd_and_module(mod_name)
+
+    module_file = tmp_path / f"{mod_name}.py"
     module_file.write_text(
         textwrap.dedent(
             """
@@ -193,7 +205,7 @@ def test_cli_sqlalchemy_from_db_missing(tmp_path, monkeypatch):
         [
             "sqlalchemy",
             "--module",
-            "mod_missing",
+            mod_name,
             "--source",
             "db",
             "--engine-url",
