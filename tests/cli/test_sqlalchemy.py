@@ -3,7 +3,10 @@ import click.testing
 
 from query_patterns.cli.main import main as cli_main
 
-from sqlalchemy import MetaData, Table, Column, Integer, Index, create_engine
+from sqlalchemy import MetaData, Table, Column, Integer, Index, create_engine, String, UniqueConstraint
+
+from query_patterns.cli.runner.sqlalchemy import SQLAlchemyRunner
+from query_patterns.cli.runner.types import TableName
 
 
 def test_cli_sqlalchemy_from_schema_success(tmp_path, monkeypatch, isolated_cwd_and_module):
@@ -58,6 +61,28 @@ def test_cli_sqlalchemy_from_schema_success(tmp_path, monkeypatch, isolated_cwd_
     # then
     assert "[OK] users('id',)" in result.output
     assert "[MISSING]" not in result.output
+
+
+def test_collect_sqlalchemy_indexes_from_schema():
+    metadata = MetaData()
+
+    Table(
+        "users",
+        metadata,
+        Column("id", Integer, primary_key=True),
+        Column("email", String, unique=True),
+        Column("username", String),
+        UniqueConstraint("username"),
+        Index("ix_users_email_username", "email", "username"),
+    )
+
+    indexes = SQLAlchemyRunner._collect_sqlalchemy_indexes_from_schema(metadata)
+
+    assert (TableName("users"), ("id",)) in indexes
+    assert (TableName("users"), ("email",)) in indexes
+    assert (TableName("users"), ("username",)) in indexes
+    assert (TableName("users"), ("email", "username")) in indexes
+
 
 
 def test_cli_sqlalchemy_from_schema_missing(tmp_path, monkeypatch, isolated_cwd_and_module):
@@ -163,6 +188,32 @@ class Repo:
     assert result.exit_code == 0, result.output
     assert "[OK] users('id',)" in result.output
     assert "[MISSING]" not in result.output
+
+
+def test_collect_sqlalchemy_indexes_from_db():
+    # given
+    engine = create_engine("sqlite:///:memory:")
+    metadata = MetaData()
+
+    Table(
+        "users",
+        metadata,
+        Column("id", Integer, primary_key=True),
+        Column("email", String, unique=True),
+        Column("username", String),
+        UniqueConstraint("username"),
+        Index("ix_users_email_username", "email", "username"),
+    )
+    metadata.create_all(engine)
+
+    # when
+    indexes = SQLAlchemyRunner._collect_sqlalchemy_indexes_from_db(engine)
+
+    # then
+    assert (TableName("users"), ("id",)) in indexes
+    assert (TableName("users"), ("email",)) in indexes
+    assert (TableName("users"), ("username",)) in indexes
+    assert (TableName("users"), ("email", "username")) in indexes
 
 
 def test_cli_sqlalchemy_from_db_missing(tmp_path, monkeypatch, isolated_cwd_and_module):

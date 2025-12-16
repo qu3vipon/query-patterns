@@ -2,7 +2,7 @@ import importlib
 from typing import TYPE_CHECKING
 
 import click
-from sqlalchemy import inspect
+from sqlalchemy import inspect, UniqueConstraint
 
 from query_patterns.cli.runner.base import BaseRunner
 from query_patterns.cli.runner.types import IndexSet, TableName, PatternSource
@@ -78,9 +78,24 @@ class SQLAlchemyRunner(BaseRunner):
         indexes: IndexSet = set()
 
         for table in metadata.tables.values():
+            table_name = TableName(table.name)
+
             for index in table.indexes:
                 cols = tuple(index.columns.keys())
-                indexes.add((TableName(table.name), cols))
+                indexes.add((table_name, cols))
+
+            if table.primary_key:
+                cols = tuple(col.name for col in table.primary_key.columns)
+                indexes.add((table_name, cols))
+
+            for constraint in table.constraints:
+                if isinstance(constraint, UniqueConstraint):
+                    cols = tuple(col.name for col in constraint.columns)
+                    indexes.add((table_name, cols))
+
+            for column in table.columns:
+                if column.unique:
+                    indexes.add((table_name, (column.name,)))
 
         return indexes
 
@@ -90,7 +105,21 @@ class SQLAlchemyRunner(BaseRunner):
         inspector = inspect(engine)
 
         for table_name in inspector.get_table_names():
+            table = TableName(table_name)
+
+            pk = inspector.get_pk_constraint(table_name)
+            pk_cols = tuple(pk.get("constrained_columns") or ())
+            if pk_cols:
+                indexes.add((table, pk_cols))
+
+            for uc in inspector.get_unique_constraints(table_name):
+                cols = tuple(uc.get("column_names") or ())
+                if cols:
+                    indexes.add((table, cols))
+
             for idx in inspector.get_indexes(table_name):
-                cols = tuple(idx["column_names"])
-                indexes.add((TableName(table_name), cols))
+                cols = tuple(idx.get("column_names") or ())
+                if cols:
+                    indexes.add((table, cols))
+
         return indexes

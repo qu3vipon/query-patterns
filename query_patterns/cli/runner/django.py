@@ -1,6 +1,8 @@
 import os
 
 import click
+from django.apps import apps
+from django.db.models import UniqueConstraint
 
 from query_patterns.cli.runner.base import BaseRunner
 from query_patterns.cli.runner.types import IndexSet, TableName, PatternSource
@@ -53,24 +55,29 @@ class DjangoRunner(BaseRunner):
     def _collect_django_indexes_from_schema() -> IndexSet:
         """
         Collect all indexes defined in Django model declarations (schema level).
-
-        Returns:
-            IndexSet: a set of (table_name, (field1, field2, ...))
-            NOTE:
-                - Only Django model-declared indexes (model.Meta.indexes) are included.
-                - Implicit PK indexes, unique constraints, and unique_together
-                  are not included unless explicitly declared as Index().
         """
         indexes: IndexSet = set()
 
-        from django.apps import apps
-
         for model in apps.get_models():
-            table = TableName(model._meta.db_table)
+            meta = model._meta
+            table = TableName(meta.db_table)
 
-            for index in model._meta.indexes:
+            for index in meta.indexes:
                 cols = tuple(index.fields)
                 indexes.add((table, cols))
+
+            if meta.pk:
+                indexes.add((table, (meta.pk.name,)))
+
+            for field in meta.fields:
+                if field.unique:
+                    indexes.add((table, (field.name,)))
+
+            for constraint in meta.constraints:
+                if isinstance(constraint, UniqueConstraint):
+                    cols = tuple(constraint.fields)
+                    indexes.add((table, cols))
+
         return indexes
 
     @staticmethod
@@ -78,11 +85,6 @@ class DjangoRunner(BaseRunner):
         """
         Collect all actual indexes that exist in the database via Django's
         introspection system.
-
-        Returns:
-            IndexSet: a set of (table_name, (field1, field2, ...))
-                      representing actual DB-level indexes.
-
         """
         indexes: IndexSet = set()
 
@@ -95,12 +97,19 @@ class DjangoRunner(BaseRunner):
                 )
 
                 for _, spec in constraints.items():
-                    # spec keys include:
-                    #   columns, primary_key, unique, index, check, foreign_key, ...
+                    cols = tuple(spec.get("columns") or ())
+                    if not cols:
+                        continue
 
-                    # Keep ONLY real indexes (not PK)
-                    if spec.get("index") and not spec.get("primary_key"):
-                        cols = tuple(spec["columns"])
+                    if spec.get("primary_key"):
+                        indexes.add((TableName(table_name), cols))
+                        continue
+
+                    if spec.get("unique"):
+                        indexes.add((TableName(table_name), cols))
+                        continue
+
+                    if spec.get("index"):
                         indexes.add((TableName(table_name), cols))
 
         return indexes
