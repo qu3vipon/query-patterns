@@ -51,24 +51,34 @@ class BaseRunner:
         return modules
 
     @staticmethod
-    def _import_module_from_cwd(module: tuple[str, ...]) -> List[ModuleType]:
+    def _add_cwd_to_syspath() -> Path:
         cwd = Path.cwd()
-        if cwd not in sys.path:
+        if str(cwd) not in sys.path:
             sys.path.insert(0, str(cwd))
-        return [importlib.import_module(m) for m in module]
+        return cwd
 
-    @staticmethod
-    def _discover_modules_from_cwd() -> List[ModuleType]:
+    def _import_module_from_cwd(self, module: tuple[str, ...]) -> List[ModuleType]:
+        self._add_cwd_to_syspath()
+
+        seen: set[str] = set()
+        modules: list[ModuleType] = []
+
+        for m in module:
+            if m in seen:
+                continue
+            seen.add(m)
+            modules.append(importlib.import_module(m))
+
+        return modules
+
+    def _discover_modules_from_cwd(self) -> List[ModuleType]:
         """
         Discover Python modules in cwd without importing the same file twice.
         """
-        cwd = Path.cwd()
+        cwd = self._add_cwd_to_syspath()
+
+        seen: set[str] = set()
         modules: list[ModuleType] = []
-        visited_files: set[str] = set()
-
-        if str(cwd) not in sys.path:
-            sys.path.insert(0, str(cwd))
-
         for py in cwd.rglob("*.py"):
             if any(part in EXCLUDE_DIRS for part in py.parts):
                 continue
@@ -77,9 +87,9 @@ class BaseRunner:
                 continue
 
             abs_path = str(py.resolve())
-            if abs_path in visited_files:
+            if abs_path in seen:
                 continue
-            visited_files.add(abs_path)
+            seen.add(abs_path)
 
             rel_parts = py.with_suffix("").relative_to(cwd).parts
             module_name = ".".join(rel_parts)
@@ -108,12 +118,23 @@ class BaseRunner:
         counts: OrderedDict[QueryPattern, int] = OrderedDict()
 
         for module in modules:
+            seen_funcs: set[int] = set()
+
             for _, obj in vars(module).items():
                 if inspect.isfunction(obj):
+                    if id(obj) in seen_funcs:
+                        continue
+                    seen_funcs.add(id(obj))
+
                     for p in get_patterns(obj):
                         counts[p] = counts.get(p, 0) + 1
+
                 elif inspect.isclass(obj):
                     for _, fn in inspect.getmembers(obj, inspect.isfunction):
+                        if id(fn) in seen_funcs:
+                            continue
+                        seen_funcs.add(id(fn))
+
                         for p in get_patterns(fn):
                             counts[p] = counts.get(p, 0) + 1
 
