@@ -25,6 +25,8 @@ query-patterns addresses these problems by allowing you to declare expected quer
     - Actual DB (connection.introspection)
 - Compares (table, columns) tuples
 - Can be integrated into CI to enforce index coverage
+### Example output
+![Example Output](./docs/example.png)
 
 ## Install
 ```shell
