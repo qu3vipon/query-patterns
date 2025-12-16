@@ -20,3 +20,6 @@ build-backend = "setuptools.build_meta"
 
 [project.scripts]
 query-patterns = "query_patterns.cli.main:main"
+
+[project.urls]
+Repository = "https://github.com/qu3vipon/query-patterns"
