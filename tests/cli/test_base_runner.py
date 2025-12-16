@@ -1,4 +1,3 @@
-from query_patterns import query_pattern
 from query_patterns.cli.runner.base import BaseRunner
 from query_patterns.pattern import QueryPattern
 
@@ -88,7 +87,6 @@ class Repo:
     assert p.columns == ("id",)
 
 
-
 def test_collects_patterns_from_function(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
 
@@ -112,7 +110,6 @@ def foo():
     assert p.table == "users"
     assert p.columns == ("id",)
     assert counts[p] == 1
-
 
 
 def test_collect_query_patterns_with_counts(tmp_path, monkeypatch):
@@ -152,7 +149,6 @@ class RepoB:
     assert p.table == "users"
     assert p.columns == ("id",)
     assert counts[p] == 2
-
 
 
 def test_import_module_from_cwd_ignores_stdlib(tmp_path, monkeypatch):

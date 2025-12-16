@@ -102,7 +102,7 @@ class SQLAlchemyRunner(BaseRunner):
 
     @staticmethod
     def _collect_sqlalchemy_indexes_from_db(engine: "Engine") -> IndexSet:
-        from sqlalchemy import inspect, UniqueConstraint
+        from sqlalchemy import inspect
 
         indexes: IndexSet = set()
         inspector = inspect(engine)

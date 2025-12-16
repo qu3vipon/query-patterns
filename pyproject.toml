@@ -13,7 +13,7 @@ dependencies = [
 sqlalchemy = ["sqlalchemy>=2.0"]
 django = ["django>=4.2"]
 sqlmodel = ["sqlmodel>=0.0.27"]
-dev = ["pytest", "tox", "ruff"]
+dev = ["pytest", "tox", "ruff", "pre-commit"]
 
 [build-system]
 requires = ["setuptools>=68"]

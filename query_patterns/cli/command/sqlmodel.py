@@ -1,6 +1,5 @@
 import click
 
-from query_patterns.cli.runner.sqlalchemy import SQLAlchemyRunner
 from query_patterns.cli.runner.sqlmodel import SQLModelRunner
 
 

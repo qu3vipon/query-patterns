@@ -1,13 +1,9 @@
-import os
 import sys
 import textwrap
 
-import click.testing
 import pytest
-from django.apps import apps
 from django.db import connection
 
-from query_patterns.cli.main import main as cli_main
 from tests.cli.conftest import run_cli_in_subprocess
 
 
@@ -175,7 +171,6 @@ def test_cli_django_from_schema_missing(
     assert "[MISSING] user('email',)" in result.stdout
     assert "[MISSING] user('username',)" in result.stdout
     assert "[MISSING] user('username', 'age')" in result.stdout
-
 
 
 @pytest.mark.parametrize("use_explicit_module", [False, True])

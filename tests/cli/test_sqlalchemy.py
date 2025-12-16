@@ -3,27 +3,40 @@ import click.testing
 
 from query_patterns.cli.main import main as cli_main
 
-from sqlalchemy import MetaData, Table, Column, Integer, Index, create_engine, String, UniqueConstraint
+from sqlalchemy import (
+    MetaData,
+    Table,
+    Column,
+    Integer,
+    Index,
+    create_engine,
+    String,
+    UniqueConstraint,
+)
 
 from query_patterns.cli.runner.sqlalchemy import SQLAlchemyRunner
 from query_patterns.cli.runner.types import TableName
 
 
-def test_cli_sqlalchemy_from_schema_success(tmp_path, monkeypatch, isolated_cwd_and_module):
+def test_cli_sqlalchemy_from_schema_success(
+    tmp_path, monkeypatch, isolated_cwd_and_module
+):
     # given
     mod_name = "mod"
     isolated_cwd_and_module(mod_name)
 
     module_file = tmp_path / f"{mod_name}.py"
     module_file.write_text(
-        textwrap.dedent((
-            """
+        textwrap.dedent(
+            (
+                """
             from query_patterns import query_pattern
             class Repo:
                 @query_pattern(table="users", columns=["id"])
                 def foo(self): pass
             """
-        ))
+            )
+        )
     )
 
     monkeypatch.syspath_prepend(str(tmp_path))
@@ -84,8 +97,9 @@ def test_collect_sqlalchemy_indexes_from_schema():
     assert (TableName("users"), ("email", "username")) in indexes
 
 
-
-def test_cli_sqlalchemy_from_schema_missing(tmp_path, monkeypatch, isolated_cwd_and_module):
+def test_cli_sqlalchemy_from_schema_missing(
+    tmp_path, monkeypatch, isolated_cwd_and_module
+):
     # given
     mod_name = "mod_missing"
     isolated_cwd_and_module(mod_name)

@@ -25,6 +25,7 @@ def isolated_cwd_and_module(tmp_path, monkeypatch):
 
 def run_cli_in_subprocess(cmd, cwd):
     import subprocess
+
     result = subprocess.run(
         cmd,
         cwd=cwd,

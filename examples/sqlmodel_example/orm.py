@@ -1,6 +1,6 @@
 from typing import Optional
 from sqlmodel import Field
-from sqlalchemy import Index, UniqueConstraint
+from sqlalchemy import UniqueConstraint
 from sqlmodel import SQLModel, create_engine
 
 
@@ -11,9 +11,8 @@ class User(SQLModel, table=True):
     email: str = Field(index=True)
     nickname: str
 
-    __table_args__ = (
-        UniqueConstraint("nickname", name="uq_sm_users_nickname"),
-    )
+    __table_args__ = (UniqueConstraint("nickname", name="uq_sm_users_nickname"),)
+
 
 engine = create_engine("sqlite:///file::memory:?cache=shared&uri=true")
 SQLModel.metadata.create_all(engine)
